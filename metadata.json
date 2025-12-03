@@ -2,6 +2,7 @@
   "name": "Copy of UI Connect Store",
   "description": "The premier campus marketplace for the University of Ibadan, featuring AI-powered shopping assistance.",
   "requestFramePermissions": [
-    "microphone"
+    "microphone",
+    "camera"
   ]
 }

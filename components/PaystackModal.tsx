@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { Lock, Loader2, CheckCircle } from 'lucide-react';
 
 interface PaystackModalProps {
   isOpen: boolean;
@@ -102,7 +102,7 @@ export const PaystackModal: React.FC<PaystackModalProps> = ({ isOpen, amount, em
           {step === 'success' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white text-center">
               <div className="w-16 h-16 bg-[#3BB75E] rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300">
-                <CheckCircle2 className="text-white" size={32} />
+                <CheckCircle className="text-white" size={32} />
               </div>
               <h3 className="font-bold text-xl text-gray-800">Payment Successful</h3>
             </div>

@@ -22,6 +22,29 @@ export interface Review {
   verifiedPurchase: boolean;
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  isRead: boolean;
+  date: number;
+}
+
+export interface BanDetails {
+  type: 'temporary' | 'permanent';
+  reason: string;
+  bannedAt: number;
+  scheduledDeletionAt?: number; // Only for permanent bans
+}
+
+export interface SecurityLogEntry {
+  id: string;
+  timestamp: number;
+  level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  message: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -31,14 +54,23 @@ export interface User {
   isStudent: boolean;
   matricNumber?: string;
   nin?: string;
+  
+  // Ban & Security
   isBanned: boolean;
+  banDetails?: BanDetails;
+  securityAlerts?: number; 
+  
+  // E-commerce
   walletBalance: number;
   referralCode: string;
   referralsCount: number;
   referredBy?: string;
-  securityAlerts?: number; 
   lastActive?: number;
-  profileImage?: string; // New field for profile picture
+  profileImage?: string;
+  
+  // User Data
+  wishlist: string[]; // Product IDs
+  notifications: Notification[];
 }
 
 export interface Product {
@@ -86,4 +118,4 @@ export interface Transaction {
   description: string;
 }
 
-export type PageView = 'home' | 'product' | 'wallet' | 'admin';
+export type PageView = 'home' | 'product' | 'wallet' | 'admin' | 'settings';

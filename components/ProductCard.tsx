@@ -1,15 +1,28 @@
 
-import React from 'react';
-import { Plus, Star, Truck, Eye } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Star, Truck, Eye, Heart } from 'lucide-react';
 import { Product } from '../types';
+import { MockBackend } from '../services/mockBackend';
+import toast from 'react-hot-toast';
 
 interface ProductCardProps {
   product: Product;
   onAdd: (product: Product) => void;
   onViewDetails: (product: Product) => void;
+  currentUserId?: string;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, onViewDetails }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, onViewDetails, currentUserId }) => {
+  const [inWishlist, setInWishlist] = useState(false);
+
+  const toggleWishlist = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!currentUserId) return toast.error("Please login first");
+      MockBackend.toggleWishlist(currentUserId, product.id);
+      setInWishlist(!inWishlist);
+      toast.success(inWishlist ? "Removed from wishlist" : "Added to wishlist");
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 group overflow-hidden flex flex-col h-full relative">
       <div 
@@ -24,13 +37,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, onView
         <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-gray-700">
           {product.category}
         </div>
+        
+        {/* Wishlist Button */}
+        <button 
+            onClick={toggleWishlist}
+            className="absolute top-3 right-3 bg-white/90 p-1.5 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors z-20"
+        >
+            <Heart size={18} fill={inWishlist ? "currentColor" : "none"} className={inWishlist ? "text-red-500" : ""} />
+        </button>
+
         {!product.inStock && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
              <span className="bg-red-500 text-white px-3 py-1 rounded font-bold text-sm">Out of Stock</span>
           </div>
         )}
         
-        {/* Quick View Overlay */}
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <button className="bg-white text-gray-800 px-4 py-2 rounded-full font-bold text-sm flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform">
                 <Eye size={16} /> View Details

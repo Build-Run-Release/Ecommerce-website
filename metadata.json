@@ -1,6 +1,6 @@
 {
-  "name": "Copy of UI Connect Store",
-  "description": "The premier campus marketplace for the University of Ibadan, featuring AI-powered shopping assistance.",
+  "name": "Connect Market",
+  "description": "The premier online marketplace for secure, fast, and reliable shopping.",
   "requestFramePermissions": [
     "microphone",
     "camera"

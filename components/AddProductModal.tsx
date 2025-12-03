@@ -17,7 +17,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
   const [formData, setFormData] = useState({
       name: '',
       price: '',
-      category: 'Merch' as Category,
+      category: 'Fashion' as Category,
       description: '',
       estimatedDelivery: '24 Hours'
   });
@@ -65,7 +65,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
                     value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     className="w-full border rounded-lg p-2.5 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
-                    placeholder="e.g. Engineering Textbook"
+                    placeholder="e.g. Wireless Headphones"
                 />
             </div>
             
@@ -87,7 +87,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
                         onChange={e => setFormData({...formData, category: e.target.value as Category})}
                         className="w-full border rounded-lg p-2.5 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
                     >
-                        {['Merch', 'Books', 'Food', 'Gadgets', 'Hostel', 'Services'].map(c => <option key={c} value={c}>{c}</option>)}
+                        {['Fashion', 'Books', 'Food', 'Electronics', 'Home', 'Services'].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                 </div>
             </div>

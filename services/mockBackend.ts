@@ -1,14 +1,15 @@
-import { User, Product, Order, Transaction, Review, AdTier, SecurityLogEntry, CartItem, Category } from '../types';
+
+import { User, Product, Order, Transaction, Review, AdTier, SecurityLogEntry, CartItem, Category, Role } from '../types';
 import { PRODUCTS as INITIAL_PRODUCTS } from '../constants';
 
 // --- Mock Data ---
 
 // Passwords are hardcoded as "password123" for existing mock users for demo purposes
 const INITIAL_USERS: (User & { password?: string })[] = [
-  { id: 'u1', name: 'Tola Student', email: 'tola@ui.edu.ng', password: 'password123', phoneNumber: '08123456789', role: 'buyer', isStudent: true, matricNumber: '213456', isBanned: false, walletBalance: 50000, referralCode: 'TOLA123', referralsCount: 0, referralTokens: 0, securityAlerts: 0, wishlist: [], notifications: [] },
-  { id: 'u2', name: 'Iya Moria', email: 'moria@ui.edu.ng', password: 'password123', phoneNumber: '08098765432', role: 'seller', isStudent: false, nin: '12345678901', isBanned: false, walletBalance: 15000, referralCode: 'MORIA99', referralsCount: 15, referralTokens: 12, securityAlerts: 0, wishlist: [], notifications: [] },
-  { id: 'u3', name: 'System Admin', email: 'admin@ui.edu.ng', password: 'admin', phoneNumber: '00000000000', role: 'admin', isStudent: false, isBanned: false, walletBalance: 0, referralCode: 'ADMIN00', referralsCount: 0, referralTokens: 0, securityAlerts: 0, wishlist: [], notifications: [] },
-  { id: 'u4', name: 'Bad Guy', email: 'fraud@yahoo.com', password: 'password123', phoneNumber: '09011112222', role: 'seller', isStudent: false, nin: '11111111111', isBanned: true, banDetails: { type: 'temporary', reason: 'Suspicious Activity', bannedAt: Date.now() }, walletBalance: 0, referralCode: 'FAKE111', referralsCount: 0, referralTokens: 0, securityAlerts: 5, wishlist: [], notifications: [] },
+  { id: 'u1', name: 'Tola Adebayo', email: 'tola@example.com', password: 'password123', phoneNumber: '08123456789', role: 'buyer', isBanned: false, walletBalance: 50000, referralCode: 'TOLA123', referralsCount: 0, referralTokens: 0, securityAlerts: 0, wishlist: [], notifications: [] },
+  { id: 'u2', name: 'Moria Store', email: 'moria@example.com', password: 'password123', phoneNumber: '08098765432', role: 'seller', isBanned: false, walletBalance: 15000, referralCode: 'MORIA99', referralsCount: 15, referralTokens: 12, securityAlerts: 0, wishlist: [], notifications: [] },
+  { id: 'u3', name: 'System Admin', email: 'admin@connect.com', password: 'admin', phoneNumber: '00000000000', role: 'admin', isBanned: false, walletBalance: 0, referralCode: 'ADMIN00', referralsCount: 0, referralTokens: 0, securityAlerts: 0, wishlist: [], notifications: [] },
+  { id: 'u4', name: 'Bad Guy', email: 'fraud@yahoo.com', password: 'password123', phoneNumber: '09011112222', role: 'seller', isBanned: true, banDetails: { type: 'temporary', reason: 'Suspicious Activity', bannedAt: Date.now() }, walletBalance: 0, referralCode: 'FAKE111', referralsCount: 0, referralTokens: 0, securityAlerts: 5, wishlist: [], notifications: [] },
 ];
 
 const INITIAL_REVIEWS: Review[] = [
@@ -16,9 +17,9 @@ const INITIAL_REVIEWS: Review[] = [
       id: 'r1', 
       productId: '5', 
       userId: 'u1', 
-      userName: 'Tola Student', 
+      userName: 'Tola Adebayo', 
       rating: 5, 
-      comment: 'The suya was extremely spicy, just how I like it!', 
+      comment: 'The food was excellent!', 
       date: Date.now() - 86400000,
       verifiedPurchase: true
   }
@@ -94,7 +95,7 @@ export class MockBackend {
       return safeUser;
   }
 
-  static register(name: string, email: string, password: string, phone: string, role: string, isStudent: boolean, idNumber: string, refCode: string, profileImage: string): User {
+  static register(name: string, email: string, password: string, phone: string, role: Role, refCode: string, profileImage: string): User {
       if (users.find((u: any) => u.email === email)) throw new Error("Email already exists");
       
       const newUser = {
@@ -104,9 +105,6 @@ export class MockBackend {
           password,
           phoneNumber: phone,
           role,
-          isStudent,
-          matricNumber: isStudent ? idNumber : undefined,
-          nin: !isStudent ? idNumber : undefined,
           isBanned: false,
           walletBalance: 0,
           referralCode: name.substring(0,3).toUpperCase() + Math.floor(Math.random()*1000),
@@ -148,7 +146,7 @@ export class MockBackend {
       }
 
       const { password: _, ...safeUser } = newUser;
-      return safeUser;
+      return safeUser as User;
   }
 
   static toggleWishlist(userId: string, productId: string) {
@@ -182,10 +180,6 @@ export class MockBackend {
           date: Date.now(),
           description: `Order Payment (${cart.length} items)`
       });
-
-      // Group items by seller to create separate orders if needed, 
-      // but for simplicity we'll create one order per seller or just one generic order if mixed?
-      // Let's assume one order per unique seller in cart
       
       const sellers = new Set(cart.map(i => i.sellerId));
       sellers.forEach(sellerId => {
@@ -368,6 +362,14 @@ export class MockBackend {
       });
   }
 
+  static analyzeImageForensics(imageData: string): Promise<number> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(Math.random() * 100); 
+      }, 2000);
+    });
+  }
+
   // Admin Methods
   
   static getSecurityLogs(): SecurityLogEntry[] {
@@ -416,7 +418,6 @@ export class MockBackend {
   static deleteUser(userId: string) {
       users = users.filter((u: any) => u.id !== userId);
       products = products.filter((p: Product) => p.sellerId !== userId);
-      // Clean up other relations if necessary
       
       securityLogs.push({
           id: `sec${Date.now()}`,

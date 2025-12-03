@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { PRODUCTS } from "../constants";
 import { Product } from "../types";
@@ -18,16 +19,16 @@ export const searchProductsWithAI = async (userQuery: string): Promise<{ matched
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `
-        You are a shopping assistant for the University of Ibadan student store.
+        You are a shopping assistant for Connect Market, a global online store.
         
         Here is our product catalog: ${JSON.stringify(productCatalog)}
 
         The user said: "${userQuery}"
 
         Task:
-        1. Identify which products from the catalog best match the user's request. Consider vague terms like "something for reading" (Books/Lamps) or "I'm hungry" (Food).
+        1. Identify which products from the catalog best match the user's request. Consider vague terms.
         2. Return a list of product IDs.
-        3. Write a short, friendly message to the student explaining why you picked these. Use Nigerian student slang occasionally if appropriate (like "Chief", "Scholar", "no wahala"), but keep it professional.
+        3. Write a short, friendly message to the shopper explaining why you picked these. Be helpful and professional.
 
         Return JSON matching this schema.
       `,
@@ -59,7 +60,7 @@ export const searchProductsWithAI = async (userQuery: string): Promise<{ matched
     console.error("AI Search Error:", error);
     return { 
       matchedProducts: [], 
-      message: "Omo, connection is acting up. I couldn't reach the AI brain. Try searching manually!" 
+      message: "I couldn't reach the AI brain right now. Try searching manually!" 
     };
   }
 };

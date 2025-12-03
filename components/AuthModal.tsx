@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, User, Lock, Mail, Phone, Hash, CreditCard, GraduationCap, Camera, Image as ImageIcon, ScanFace, Loader2, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { X, User, Lock, Mail, Phone, Hash, CreditCard, Camera, Image as ImageIcon, ScanFace, Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
 import { MockBackend } from '../services/mockBackend';
 import { User as UserType } from '../types';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ interface AuthModalProps {
   onClose: () => void;
   onLoginSuccess: (user: UserType) => void;
   initialView?: 'login' | 'register';
-  initialRole?: 'buyer' | 'seller'; // New prop
+  initialRole?: 'buyer' | 'seller';
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ 
@@ -31,8 +31,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<'buyer' | 'seller'>(initialRole);
-  const [isStudent, setIsStudent] = useState(true);
-  const [idNumber, setIdNumber] = useState(''); // Matric or NIN
   const [refCode, setRefCode] = useState('');
   
   // Image Capture State
@@ -42,17 +40,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Effect to update internal view state if prop changes
   useEffect(() => {
     setView(initialView);
   }, [initialView, isOpen]);
 
-  // Effect to update role if initialRole changes
   useEffect(() => {
     setRole(initialRole);
   }, [initialRole, isOpen]);
 
-  // Cleanup camera stream on close
   useEffect(() => {
     if (!isOpen || captureMode !== 'camera') {
       stopCamera();
@@ -112,10 +107,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     stopCamera();
     setIsVerifyingImage(true);
     
-    // Simulate complex AI analysis steps for user feedback
     try {
-        await new Promise(r => setTimeout(r, 1000)); // Step 1: Uploading
-        await MockBackend.verifyImageRealness(imageData); // Step 2: Backend AI
+        await new Promise(r => setTimeout(r, 1000)); 
+        await MockBackend.verifyImageRealness(imageData);
         setProfileImage(imageData);
         toast.success("Image Verified: Real Person Detected", { icon: '✅' });
     } catch (e) {
@@ -155,7 +149,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
     setLoading(true);
     try {
-      const user = await MockBackend.register(name, email, password, phone, role, isStudent, idNumber, refCode, profileImage);
+      // General registration without student details
+      const user = await MockBackend.register(name, email, password, phone, role, refCode, profileImage);
       toast.success("Account created successfully!");
       onLoginSuccess(user);
       onClose();
@@ -173,7 +168,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <X size={24} />
         </button>
 
-        {/* Header Tabs */}
         <div className="flex border-b border-gray-100">
           <button 
             onClick={() => setView('login')}
@@ -189,14 +183,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </div>
 
-        {/* Scrollable Form Content */}
         <div className="flex-grow overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200">
           <div className="text-center mb-6">
             <h2 className="text-xl font-bold font-serif text-gray-800">
-              {view === 'login' ? 'Welcome Back, Scholar' : 'Join UI Connect'}
+              {view === 'login' ? 'Welcome Back' : 'Join Connect Market'}
             </h2>
             <p className="text-xs text-gray-500 mt-1">
-              {view === 'login' ? 'Access your wallet and orders.' : 'Verified marketplace for UI students & staff.'}
+              {view === 'login' ? 'Access your wallet and orders.' : 'Verified marketplace for everyone.'}
             </p>
           </div>
 
@@ -212,7 +205,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ui-blue/20 bg-gray-50 focus:bg-white transition-all"
-                    placeholder="name@ui.edu.ng"
+                    placeholder="name@example.com"
                   />
                 </div>
               </div>
@@ -233,166 +226,173 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="text-right">
-                <button 
-                  type="button" 
-                  onClick={() => toast.success('Reset link sent to your email!', { icon: '📧' })} 
-                  className="text-xs text-ui-blue hover:underline font-medium"
-                >
-                  Forgot password?
-                </button>
+                 <button type="button" onClick={() => toast("Reset link sent to your email", {icon: '📧'})} className="text-xs text-ui-gold font-bold hover:underline">Forgot password?</button>
               </div>
 
               <button 
+                type="submit" 
                 disabled={loading}
-                className="w-full bg-ui-blue text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-800 transition-all disabled:opacity-50"
+                className="w-full bg-ui-blue text-white py-3 rounded-xl font-bold hover:bg-blue-800 transition-colors shadow-lg flex justify-center"
               >
-                {loading ? 'Logging in...' : 'Log In'}
+                {loading ? <Loader2 className="animate-spin" /> : 'Log In'}
               </button>
             </form>
           ) : (
             <form onSubmit={handleRegister} className="space-y-4">
-              {/* Image Capture Section */}
-              <div className="mb-6 flex flex-col items-center">
-                 <div className="relative w-32 h-32 bg-gray-100 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden group">
-                     {profileImage ? (
-                         <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
-                     ) : isVerifyingImage ? (
-                         <div className="flex flex-col items-center animate-pulse">
-                             <ScanFace className="text-ui-blue mb-2 animate-bounce" size={24} />
-                             <span className="text-[10px] text-ui-blue font-bold">AI Verifying...</span>
-                         </div>
-                     ) : captureMode === 'camera' ? (
-                         <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                     ) : (
-                         <div className="text-center p-2">
-                             <User size={32} className="mx-auto text-gray-300 mb-1" />
-                             <span className="text-[10px] text-gray-400">No Photo</span>
-                         </div>
-                     )}
-                     
-                     {/* Overlay Actions */}
-                     {!isVerifyingImage && captureMode !== 'camera' && (
-                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                            <button type="button" onClick={startCamera} className="bg-white text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 hover:bg-gray-100">
-                                <Camera size={12}/> Camera
-                            </button>
-                            <label className="bg-white text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 hover:bg-gray-100 cursor-pointer">
-                                <ImageIcon size={12}/> Upload
-                                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-                            </label>
-                         </div>
-                     )}
-                     
-                     {captureMode === 'camera' && (
-                         <button type="button" onClick={takePhoto} className="absolute bottom-4 bg-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform">
-                             <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-white"></div>
-                         </button>
-                     )}
-                 </div>
-                 
-                 <canvas ref={canvasRef} className="hidden" />
-                 
-                 <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
-                    {profileImage ? <span className="text-green-600 flex items-center gap-1"><CheckCircle size={10}/> AI Verified Real</span> : <span className="flex items-center gap-1"><ShieldCheck size={10}/> Anti-Fake Detection Active</span>}
-                 </p>
+               {/* Role Selection */}
+              <div className="flex gap-2 mb-2 p-1 bg-gray-100 rounded-lg">
+                  <button 
+                    type="button" 
+                    onClick={() => setRole('buyer')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${role === 'buyer' ? 'bg-white text-ui-blue shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                      I want to Buy
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setRole('seller')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${role === 'seller' ? 'bg-white text-ui-blue shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                      I want to Sell
+                  </button>
               </div>
 
-              {/* Role Selection */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <label className={`border rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer transition-all ${role === 'buyer' ? 'bg-blue-50 border-ui-blue text-ui-blue ring-1 ring-ui-blue' : 'hover:bg-gray-50'}`}>
-                  <input type="radio" className="hidden" checked={role === 'buyer'} onChange={() => setRole('buyer')} />
-                  <User size={16} /> <span className="font-bold text-sm">Buyer</span>
-                </label>
-                <label className={`border rounded-xl p-3 flex items-center justify-center gap-2 cursor-pointer transition-all ${role === 'seller' ? 'bg-blue-50 border-ui-blue text-ui-blue ring-1 ring-ui-blue' : 'hover:bg-gray-50'}`}>
-                  <input type="radio" className="hidden" checked={role === 'seller'} onChange={() => setRole('seller')} />
-                  <CreditCard size={16} /> <span className="font-bold text-sm">Seller</span>
-                </label>
-              </div>
-
-              {/* Status Selection */}
-              <div className="flex gap-4 text-sm mb-2">
-                 <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" checked={isStudent} onChange={() => setIsStudent(true)} className="text-ui-blue" />
-                    <span>UI Student</span>
-                 </label>
-                 <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" checked={!isStudent} onChange={() => setIsStudent(false)} className="text-ui-blue" />
-                    <span>Non-Student / Staff</span>
-                 </label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                <div className="relative">
-                  <User className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input 
-                    type="text" required placeholder="Full Name"
-                    value={name} onChange={e => setName(e.target.value)}
-                    className="w-full pl-10 p-2.5 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Full Name</label>
+                    <div className="relative">
+                    <User className="absolute left-3 top-3 text-gray-400" size={18} />
+                    <input 
+                        type="text" 
+                        required 
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ui-blue/20 bg-gray-50 focus:bg-white"
+                        placeholder="John Doe"
+                    />
+                    </div>
                 </div>
+                
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Phone</label>
+                    <div className="relative">
+                    <Phone className="absolute left-3 top-3 text-gray-400" size={18} />
+                    <input 
+                        type="tel" 
+                        required 
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ui-blue/20 bg-gray-50 focus:bg-white"
+                        placeholder="080..."
+                    />
+                    </div>
+                </div>
+              </div>
 
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 text-gray-400" size={18} />
                   <input 
-                    type="email" required placeholder="Email Address"
-                    value={email} onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-10 p-2.5 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
+                    type="email" 
+                    required 
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ui-blue/20 bg-gray-50 focus:bg-white"
+                    placeholder="name@example.com"
                   />
                 </div>
+              </div>
 
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 text-gray-400" size={18} />
-                  <input 
-                    type="tel" required placeholder="Phone Number"
-                    value={phone} onChange={e => setPhone(e.target.value)}
-                    className="w-full pl-10 p-2.5 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
-                  />
-                </div>
-
-                {/* Conditional Verification Field */}
-                <div className="relative">
-                   {isStudent ? (
-                       <GraduationCap className="absolute left-3 top-3 text-gray-400" size={18} />
-                   ) : (
-                       <Hash className="absolute left-3 top-3 text-gray-400" size={18} />
-                   )}
-                   <input 
-                    type="text" required 
-                    placeholder={isStudent ? "Matric Number (e.g., 215432)" : "NIN (11 Digits)"}
-                    value={idNumber} onChange={e => setIdNumber(e.target.value)}
-                    className="w-full pl-10 p-2.5 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
-                  />
-                </div>
-
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
                   <input 
-                    type="password" required placeholder="Create Password"
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-10 p-2.5 border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-ui-blue/20 outline-none"
+                    type="password" 
+                    required 
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ui-blue/20 bg-gray-50 focus:bg-white"
+                    placeholder="Create a strong password"
                   />
                 </div>
+              </div>
+              
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase">Referral Code (Optional)</label>
+                <div className="relative">
+                  <Hash className="absolute left-3 top-3 text-gray-400" size={18} />
+                  <input 
+                    type="text" 
+                    value={refCode}
+                    onChange={e => setRefCode(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-ui-blue/20 bg-gray-50 focus:bg-white"
+                    placeholder="Enter code if you have one"
+                  />
+                </div>
+              </div>
 
-                <input 
-                   type="text" placeholder="Referral Code (Optional)"
-                   value={refCode} onChange={e => setRefCode(e.target.value)}
-                   className="w-full p-2.5 border rounded-xl bg-gray-50 focus:bg-white text-sm"
-                />
+              {/* Profile Image Capture */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-2">
+                     Profile Verification {profileImage && <CheckCircle size={14} className="text-green-500"/>}
+                </label>
+                
+                {!profileImage && captureMode === 'none' && (
+                    <div className="flex gap-2">
+                        <button type="button" onClick={startCamera} className="flex-1 py-3 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:border-ui-blue hover:text-ui-blue transition-colors">
+                            <Camera size={24} className="mb-1" />
+                            <span className="text-xs font-bold">Use Camera</span>
+                        </button>
+                        <label className="flex-1 py-3 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center text-gray-500 hover:border-ui-blue hover:text-ui-blue transition-colors cursor-pointer">
+                            <ImageIcon size={24} className="mb-1" />
+                            <span className="text-xs font-bold">Upload Photo</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                        </label>
+                    </div>
+                )}
+                
+                {captureMode === 'camera' && (
+                    <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
+                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
+                        <button type="button" onClick={takePhoto} className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-full p-3 shadow-lg hover:scale-110 transition-transform">
+                            <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                        </button>
+                        <canvas ref={canvasRef} className="hidden" />
+                    </div>
+                )}
+
+                {isVerifyingImage && (
+                    <div className="p-4 bg-gray-50 rounded-xl flex items-center gap-3 border border-gray-100">
+                        <Loader2 className="animate-spin text-ui-gold" />
+                        <div className="text-xs">
+                            <p className="font-bold">Analyzing biometric data...</p>
+                            <p className="text-gray-400">Checking for generative artifacts...</p>
+                        </div>
+                    </div>
+                )}
+                
+                {profileImage && !isVerifyingImage && (
+                    <div className="relative h-20 bg-gray-50 rounded-xl flex items-center p-2 gap-3 border border-gray-100">
+                        <img src={profileImage} alt="Preview" className="h-16 w-16 rounded-lg object-cover bg-gray-200" />
+                        <div>
+                            <p className="text-sm font-bold text-green-600 flex items-center gap-1"><ShieldCheck size={14}/> Verified Real</p>
+                            <button type="button" onClick={() => setProfileImage(null)} className="text-xs text-red-500 underline">Retake</button>
+                        </div>
+                    </div>
+                )}
               </div>
 
               <button 
-                disabled={loading || !profileImage}
-                className="w-full bg-ui-blue text-white py-3 rounded-xl font-bold shadow-lg hover:bg-blue-800 transition-all disabled:opacity-50 mt-4 flex items-center justify-center gap-2"
+                type="submit" 
+                disabled={loading || isVerifyingImage}
+                className="w-full bg-ui-gold text-ui-blue py-3 rounded-xl font-bold hover:bg-yellow-400 transition-colors shadow-lg flex justify-center mt-4"
               >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Complete Sign Up'}
+                {loading ? <Loader2 className="animate-spin" /> : 'Create Account'}
               </button>
             </form>
           )}
-        </div>
-        
-        {/* Footer */}
-        <div className="p-4 bg-gray-50 text-center text-xs text-gray-400 border-t border-gray-100">
-           By continuing, you agree to UI Connect's Terms & Conditions.
         </div>
       </div>
     </div>

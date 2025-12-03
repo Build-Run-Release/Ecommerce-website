@@ -1,5 +1,5 @@
 
-export type Category = 'Merch' | 'Books' | 'Food' | 'Gadgets' | 'Hostel' | 'Services';
+export type Category = 'Fashion' | 'Books' | 'Food' | 'Electronics' | 'Home' | 'Services';
 
 export type Role = 'buyer' | 'seller' | 'admin';
 
@@ -51,7 +51,9 @@ export interface User {
   email: string;
   phoneNumber: string;
   role: Role;
-  isStudent: boolean;
+  
+  // Deprecated/Optional for general store
+  isStudent?: boolean; 
   matricNumber?: string;
   nin?: string;
   

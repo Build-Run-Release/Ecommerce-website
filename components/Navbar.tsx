@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingCart, GraduationCap, Wallet, Shield, LogOut, LogIn, UserPlus, Heart, Bell, Search, Settings, Menu } from 'lucide-react';
+import { ShoppingCart, ShoppingBag, Wallet, Shield, LogOut, LogIn, UserPlus, Heart, Bell, Search, Settings, Menu } from 'lucide-react';
 import { User, PageView } from '../types';
 
 interface NavbarProps {
@@ -36,11 +36,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, cartCount, onCartCl
             onClick={() => onNavigate('home')}
             >
             <div className="bg-ui-gold p-1.5 rounded-lg text-ui-blue shadow-lg shadow-black/20">
-                <GraduationCap size={24} strokeWidth={2.5} />
+                <ShoppingBag size={24} strokeWidth={2.5} />
             </div>
             <div className="flex flex-col leading-tight">
-                <span className="font-bold text-lg tracking-tight font-serif hidden xs:block">UI CONNECT</span>
-                <span className="font-bold text-lg tracking-tight font-serif block xs:hidden">UI</span>
+                <span className="font-bold text-lg tracking-tight font-serif hidden xs:block">CONNECT MARKET</span>
+                <span className="font-bold text-lg tracking-tight font-serif block xs:hidden">CONNECT</span>
             </div>
             </div>
 
@@ -171,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentUser, cartCount, onCartCl
             <div className="relative">
                 <input 
                     type="text" 
-                    placeholder="Search for essentials..." 
+                    placeholder="Search products..." 
                     className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-2 pl-10 text-sm text-white placeholder:text-gray-300 focus:bg-white focus:text-gray-900 focus:outline-none transition-all"
                     value={searchQuery}
                     onChange={handleSearch}

@@ -64,6 +64,8 @@ export interface User {
   walletBalance: number;
   referralCode: string;
   referralsCount: number;
+  referralTokens: number; // New: Tokens for redeeming rewards
+  activeAdTier?: AdTier['id']; // New: Active earned ad tier
   referredBy?: string;
   lastActive?: number;
   profileImage?: string;

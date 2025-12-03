@@ -55,12 +55,14 @@ export default function App() {
             } else if (freshUser.isBanned) {
                 handleLogout();
                 toast.error("Account has been suspended.");
+            } else {
+                setCurrentUser(freshUser); // Update local state
             }
         }
-    }, 10000);
+    }, 5000);
     
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   const handleAddToCart = (product: Product) => {
     if (!currentUser) {
@@ -93,17 +95,51 @@ export default function App() {
     setIs2FAOpen(true); 
   };
 
-  const handle2FASuccess = () => { setIs2FAOpen(false); setIsPaystackOpen(true); };
+  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const handle2FASuccess = async () => { 
+    setIs2FAOpen(false); 
+    if (!currentUser) return;
+    
+    const total = cartTotal + 500; // Includes delivery
+    
+    // Smart Checkout Logic:
+    // If wallet has enough funds, pay directly.
+    // Else, prompt for Paystack Top-Up.
+    
+    if (currentUser.walletBalance >= total) {
+        try {
+            await MockBackend.createOrder(currentUser.id, cart, total);
+            setCart([]);
+            setView('wallet');
+            toast.success("Payment successful! Deducted from wallet.");
+        } catch (e: any) {
+            toast.error(e.message);
+        }
+    } else {
+        toast("Insufficient wallet balance. Please complete payment to top up.", { icon: '💳' });
+        setIsPaystackOpen(true); 
+    }
+  };
 
   const handlePaymentSuccess = async () => {
     setIsPaystackOpen(false);
     if (!currentUser) return;
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + 500;
+    const total = cartTotal + 500;
+    
     try {
+      // 1. Top Up Wallet First (Ledger Logic)
+      MockBackend.topUpWallet(currentUser.id, total);
+      
+      // 2. Then Create Order (Deducts from Wallet)
       await MockBackend.createOrder(currentUser.id, cart, total);
+      
       setCart([]);
       setView('wallet'); 
-    } catch (e) { console.error(e); }
+    } catch (e: any) { 
+        console.error(e);
+        toast.error(e.message || "Payment processing failed");
+    }
   };
 
   const handleLoginSuccess = (user: User) => {
@@ -155,8 +191,6 @@ export default function App() {
     ));
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
   // Navigate Handler
   const handleNavigate = (page: PageView) => {
       if (page === 'settings') {
@@ -189,7 +223,7 @@ export default function App() {
               <div className="flex flex-col md:flex-row justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-ui-blue font-serif mb-4 md:mb-0">Campus Essentials</h2>
                 <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto scrollbar-hide">
-                  {['All', 'Merch', 'Books', 'Food', 'Gadgets', 'Hostel'].map(cat => (
+                  {['All', 'Merch', 'Books', 'Food', 'Gadgets', 'Hostel', 'Services'].map(cat => (
                     <button key={cat} onClick={() => filterByCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${activeCategory === cat ? 'bg-ui-blue text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'}`}>{cat}</button>
                   ))}
                 </div>

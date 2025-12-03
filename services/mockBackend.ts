@@ -1,361 +1,428 @@
-
-import { User, Product, Order, Transaction, OrderStatus, Review, AdTier, Notification, BanDetails, Category, SecurityLogEntry } from '../types';
+import { User, Product, Order, Transaction, Review, AdTier, SecurityLogEntry, CartItem, Category } from '../types';
 import { PRODUCTS as INITIAL_PRODUCTS } from '../constants';
 
 // --- Mock Data ---
 
 // Passwords are hardcoded as "password123" for existing mock users for demo purposes
 const INITIAL_USERS: (User & { password?: string })[] = [
-  { id: 'u1', name: 'Tola Student', email: 'tola@ui.edu.ng', password: 'password123', phoneNumber: '08123456789', role: 'buyer', isStudent: true, matricNumber: '213456', isBanned: false, walletBalance: 50000, referralCode: 'TOLA123', referralsCount: 0, securityAlerts: 0, wishlist: [], notifications: [] },
-  { id: 'u2', name: 'Iya Moria', email: 'moria@ui.edu.ng', password: 'password123', phoneNumber: '08098765432', role: 'seller', isStudent: false, nin: '12345678901', isBanned: false, walletBalance: 15000, referralCode: 'MORIA99', referralsCount: 15, securityAlerts: 0, wishlist: [], notifications: [] },
-  { id: 'u3', name: 'System Admin', email: 'admin@ui.edu.ng', password: 'admin', phoneNumber: '00000000000', role: 'admin', isStudent: false, isBanned: false, walletBalance: 0, referralCode: 'ADMIN00', referralsCount: 0, securityAlerts: 0, wishlist: [], notifications: [] },
-  { id: 'u4', name: 'Bad Guy', email: 'fraud@yahoo.com', password: 'password123', phoneNumber: '09011112222', role: 'seller', isStudent: false, nin: '11111111111', isBanned: true, banDetails: { type: 'temporary', reason: 'Suspicious Activity', bannedAt: Date.now() }, walletBalance: 0, referralCode: 'FAKE111', referralsCount: 0, securityAlerts: 5, wishlist: [], notifications: [] },
+  { id: 'u1', name: 'Tola Student', email: 'tola@ui.edu.ng', password: 'password123', phoneNumber: '08123456789', role: 'buyer', isStudent: true, matricNumber: '213456', isBanned: false, walletBalance: 50000, referralCode: 'TOLA123', referralsCount: 0, referralTokens: 0, securityAlerts: 0, wishlist: [], notifications: [] },
+  { id: 'u2', name: 'Iya Moria', email: 'moria@ui.edu.ng', password: 'password123', phoneNumber: '08098765432', role: 'seller', isStudent: false, nin: '12345678901', isBanned: false, walletBalance: 15000, referralCode: 'MORIA99', referralsCount: 15, referralTokens: 12, securityAlerts: 0, wishlist: [], notifications: [] },
+  { id: 'u3', name: 'System Admin', email: 'admin@ui.edu.ng', password: 'admin', phoneNumber: '00000000000', role: 'admin', isStudent: false, isBanned: false, walletBalance: 0, referralCode: 'ADMIN00', referralsCount: 0, referralTokens: 0, securityAlerts: 0, wishlist: [], notifications: [] },
+  { id: 'u4', name: 'Bad Guy', email: 'fraud@yahoo.com', password: 'password123', phoneNumber: '09011112222', role: 'seller', isStudent: false, nin: '11111111111', isBanned: true, banDetails: { type: 'temporary', reason: 'Suspicious Activity', bannedAt: Date.now() }, walletBalance: 0, referralCode: 'FAKE111', referralsCount: 0, referralTokens: 0, securityAlerts: 5, wishlist: [], notifications: [] },
 ];
 
 const INITIAL_REVIEWS: Review[] = [
-  { id: 'r1', productId: '5', userId: 'u1', userName: 'Tola Student', rating: 5, comment: 'The suya was extremely spicy, just how I like it!', date: Date.now() - 100000, verifiedPurchase: true },
-  { id: 'r2', productId: '2', userId: 'u1', userName: 'Tola Student', rating: 4, comment: 'Good book, but pages were a bit thin.', date: Date.now() - 200000, verifiedPurchase: true },
+  { 
+      id: 'r1', 
+      productId: '5', 
+      userId: 'u1', 
+      userName: 'Tola Student', 
+      rating: 5, 
+      comment: 'The suya was extremely spicy, just how I like it!', 
+      date: Date.now() - 86400000,
+      verifiedPurchase: true
+  }
 ];
 
-const INITIAL_AD_TIERS: AdTier[] = [
-  { id: 'bronze', name: 'Bronze Plan', price: 1000, durationDays: 1, features: ['Standard Visibility', 'Search Boost'] },
-  { id: 'silver', name: 'Silver Plan', price: 5000, durationDays: 7, features: ['Homepage Feature', 'Top of Search', 'Email Newsletter'] },
-  { id: 'gold', name: 'Gold Plan', price: 20000, durationDays: 30, features: ['Hero Banner', 'Push Notification', 'All Silver Features'] },
-];
-
-const ENRICHED_PRODUCTS = INITIAL_PRODUCTS.map(p => ({
-  ...p,
-  sellerId: 'u2'
-}));
-
-// --- State Storage ---
-let users = [...INITIAL_USERS];
-let products = [...ENRICHED_PRODUCTS];
+// In-Memory State
+let users = JSON.parse(JSON.stringify(INITIAL_USERS));
+let products = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
+let reviews = JSON.parse(JSON.stringify(INITIAL_REVIEWS));
 let orders: Order[] = [];
 let transactions: Transaction[] = [];
-let reviews: Review[] = [...INITIAL_REVIEWS];
-let adTiers: AdTier[] = [...INITIAL_AD_TIERS];
 let securityLogs: SecurityLogEntry[] = [];
+const adTiers: AdTier[] = [
+    { id: 'bronze', name: 'Bronze', price: 1000, durationDays: 3, features: ['Standard listing'] },
+    { id: 'silver', name: 'Silver', price: 2500, durationDays: 7, features: ['Highlighted background'] },
+    { id: 'gold', name: 'Gold', price: 5000, durationDays: 30, features: ['Top of category', 'Homepage featured'] }
+];
 
-// --- Security State ---
-const RATE_LIMITS: Record<string, number> = {}; 
-const RATE_LIMIT_WINDOW = 60000; 
-const MAX_REQUESTS = 50; 
+export class MockBackend {
+  static getProducts(): Product[] {
+    return products;
+  }
 
-// --- Helper Functions ---
+  static getProductReviews(productId: string): Review[] {
+    return reviews.filter((r: Review) => r.productId === productId);
+  }
 
-const logSecurityEvent = (message: string, severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL') => {
-  const entry: SecurityLogEntry = {
-      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-      level: severity,
-      message
-  };
-  
-  securityLogs.push(entry);
-  if (securityLogs.length > 200) securityLogs.shift(); // Remove oldest
-};
-
-const sanitize = (input: string) => {
-  if (!input) return "";
-  if (typeof input !== 'string') return String(input);
-  const threats = [/<script\b[^>]*>([\s\S]*?)<\/script>/gmi, /javascript:/gmi, /on\w+\s*=/gmi];
-  for (const pattern of threats) {
-    if (pattern.test(input)) {
-      logSecurityEvent(`Malicious input blocked: ${input.substring(0, 15)}...`, 'CRITICAL');
-      throw new Error("Security Violation.");
+  static submitReview(productId: string, userId: string, rating: number, comment: string) {
+    const user = users.find((u: User) => u.id === userId);
+    if (!user) throw new Error("User not found");
+    const review: Review = {
+        id: `r${Date.now()}`,
+        productId,
+        userId,
+        userName: user.name,
+        rating,
+        comment,
+        date: Date.now(),
+        verifiedPurchase: true // Simplify for mock
+    };
+    reviews.unshift(review);
+    
+    // Update product rating
+    const product = products.find((p: Product) => p.id === productId);
+    if (product) {
+        const productReviews = reviews.filter((r: Review) => r.productId === productId);
+        const avg = productReviews.reduce((acc: number, r: Review) => acc + r.rating, 0) / productReviews.length;
+        product.rating = parseFloat(avg.toFixed(1));
     }
   }
-  return input.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m] || m));
-};
 
-const checkRateLimit = (userId: string = 'ip_address') => {
-  if (!RATE_LIMITS[userId]) RATE_LIMITS[userId] = 0;
-  RATE_LIMITS[userId]++;
-  setTimeout(() => { RATE_LIMITS[userId]--; }, RATE_LIMIT_WINDOW);
-  if (RATE_LIMITS[userId] > MAX_REQUESTS) throw new Error("Too many requests.");
-};
+  static runDailyMaintenance() {
+    // Simulate cleanup or scheduled tasks
+    console.log("Running daily maintenance...");
+  }
 
-const addNotification = (userId: string, message: string, type: Notification['type'] = 'info') => {
-  const user = users.find(u => u.id === userId);
-  if (user) {
-    user.notifications.unshift({
-      id: `notif_${Date.now()}_${Math.random()}`,
-      userId,
-      message,
-      type,
-      isRead: false,
-      date: Date.now()
+  static getAllUsers(): User[] {
+    return users.map((u: any) => {
+        const { password, ...safeUser } = u;
+        return safeUser;
     });
   }
-};
 
-// --- Service Methods ---
-
-export const MockBackend = {
-  // --- Auth & User ---
-  
-  verifyImageRealness: async (base64Image: string): Promise<boolean> => {
-     return new Promise((resolve) => {
-         setTimeout(() => {
-             if (!base64Image || base64Image.length < 1000) { resolve(false); return; }
-             resolve(true);
-         }, 2000); 
-     });
-  },
-
-  login: async (email: string, password?: string): Promise<User | null> => {
-    checkRateLimit(email);
-    const safeEmail = sanitize(email);
-    const user = users.find(u => u.email === safeEmail);
-    
-    if (user && password && user.password !== password) {
-         logSecurityEvent(`Failed login attempt for ${safeEmail}`, 'LOW');
-         throw new Error("Invalid credentials");
-    }
-
-    if (user?.isBanned) {
-      if (user.banDetails?.type === 'permanent' && user.banDetails.scheduledDeletionAt) {
-          const daysLeft = Math.ceil((user.banDetails.scheduledDeletionAt - Date.now()) / (1000 * 60 * 60 * 24));
-          throw new Error(`Account permanently banned. Deletion in ${daysLeft} days.`);
-      }
-      throw new Error(`Account suspended: ${user.banDetails?.reason || 'Policy Violation'}`);
-    }
-    
-    if (user) {
-        users = users.map(u => u.id === user.id ? { ...u, lastActive: Date.now() } : u);
-        const { password: _, ...safeUser } = user;
-        return safeUser;
-    }
-    return null;
-  },
-
-  register: async (name: string, email: string, password: string, phoneNumber: string, role: 'buyer' | 'seller', isStudent: boolean, idNumber: string, referralCode?: string, profileImage?: string): Promise<User> => {
-    checkRateLimit('registration');
-    const safeName = sanitize(name);
-    const safeEmail = sanitize(email);
-    
-    if (users.find(u => u.email === safeEmail)) throw new Error("Email already registered.");
-    
-    const newUser: User & { password?: string } = {
-      id: `u_${Date.now()}`,
-      name: safeName,
-      email: safeEmail,
-      phoneNumber: sanitize(phoneNumber),
-      password, 
-      role,
-      isStudent,
-      matricNumber: isStudent ? sanitize(idNumber) : undefined,
-      nin: !isStudent ? sanitize(idNumber) : undefined,
-      isBanned: false,
-      walletBalance: 0,
-      referralCode: (safeName.substring(0,3) + Math.floor(Math.random()*10000)).toUpperCase(),
-      referralsCount: 0,
-      securityAlerts: 0,
-      profileImage,
-      wishlist: [],
-      notifications: [{
-          id: 'welcome', userId: '', message: 'Welcome to UI Connect! Set up your profile.', type: 'success', isRead: false, date: Date.now()
-      }]
-    };
-
-    users.push(newUser);
-    logSecurityEvent(`New User Registered: ${safeEmail}`, 'LOW');
-    const { password: _, ...safeUser } = newUser;
-    return safeUser;
-  },
-
-  updateProfile: (userId: string, data: { name?: string, phoneNumber?: string, password?: string }) => {
-      const userIdx = users.findIndex(u => u.id === userId);
-      if (userIdx === -1) throw new Error("User not found");
+  static login(email: string, password: string): User | null {
+      const user = users.find((u: any) => u.email === email && u.password === password);
+      if (!user) return null;
+      if (user.isBanned) throw new Error("Account is suspended.");
       
-      const updatedUser = { ...users[userIdx] };
-      if (data.name) updatedUser.name = sanitize(data.name);
-      if (data.phoneNumber) updatedUser.phoneNumber = sanitize(data.phoneNumber);
-      if (data.password) updatedUser.password = data.password; // In real app, hash this
+      // Update last active
+      user.lastActive = Date.now();
       
-      users[userIdx] = updatedUser;
-      return users[userIdx];
-  },
+      const { password: _, ...safeUser } = user;
+      return safeUser;
+  }
 
-  // --- Ban & Maintenance ---
+  static register(name: string, email: string, password: string, phone: string, role: string, isStudent: boolean, idNumber: string, refCode: string, profileImage: string): User {
+      if (users.find((u: any) => u.email === email)) throw new Error("Email already exists");
+      
+      const newUser = {
+          id: `u${Date.now()}`,
+          name,
+          email,
+          password,
+          phoneNumber: phone,
+          role,
+          isStudent,
+          matricNumber: isStudent ? idNumber : undefined,
+          nin: !isStudent ? idNumber : undefined,
+          isBanned: false,
+          walletBalance: 0,
+          referralCode: name.substring(0,3).toUpperCase() + Math.floor(Math.random()*1000),
+          referralsCount: 0,
+          referralTokens: 0,
+          securityAlerts: 0,
+          wishlist: [],
+          notifications: [],
+          profileImage
+      };
+      
+      users.push(newUser);
 
-  banUser: (userId: string, type: 'temporary' | 'permanent', reason: string) => {
-    checkRateLimit('admin_action');
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-
-    const banDetails: BanDetails = {
-        type,
-        reason: sanitize(reason),
-        bannedAt: Date.now(),
-        scheduledDeletionAt: type === 'permanent' ? Date.now() + (7 * 24 * 60 * 60 * 1000) : undefined
-    };
-
-    users = users.map(u => u.id === userId ? { ...u, isBanned: true, banDetails } : u);
-    logSecurityEvent(`User ${user.email} banned (${type}): ${reason}`, 'HIGH');
-  },
-
-  unbanUser: (userId: string) => {
-    users = users.map(u => u.id === userId ? { ...u, isBanned: false, banDetails: undefined } : u);
-    logSecurityEvent(`User ${userId} unbanned`, 'MEDIUM');
-  },
-
-  deleteUser: (userId: string) => {
-      checkRateLimit('admin_action');
-      users = users.filter(u => u.id !== userId);
-      // Cascade delete products
-      products = products.filter(p => p.sellerId !== userId);
-      logSecurityEvent(`User ${userId} and their products permanently deleted.`, 'CRITICAL');
-  },
-
-  runDailyMaintenance: () => {
-      // Check for permanent bans that have expired
-      const now = Date.now();
-      const usersToDelete = users.filter(u => 
-          u.isBanned && 
-          u.banDetails?.type === 'permanent' && 
-          u.banDetails.scheduledDeletionAt && 
-          now > u.banDetails.scheduledDeletionAt
-      );
-
-      usersToDelete.forEach(u => MockBackend.deleteUser(u.id));
-      if (usersToDelete.length > 0) {
-          console.log(`Maintenance: Deleted ${usersToDelete.length} permanently banned accounts.`);
+      // Handle Referral
+      if (refCode) {
+          const referrer = users.find((u: any) => u.referralCode === refCode);
+          if (referrer) {
+              referrer.referralsCount++;
+              referrer.walletBalance += 500; // Bonus
+              referrer.notifications.push({
+                  id: `n${Date.now()}`,
+                  userId: referrer.id,
+                  message: `You earned ₦500 for referring ${name}`,
+                  type: 'success',
+                  isRead: false,
+                  date: Date.now()
+              });
+              
+              // Log Transaction for referrer
+              transactions.push({
+                  id: `tx${Date.now()}`,
+                  userId: referrer.id,
+                  type: 'REFERRAL_BONUS',
+                  amount: 500,
+                  date: Date.now(),
+                  description: `Referral Bonus: ${name}`
+              });
+          }
       }
-  },
 
-  // --- Products ---
+      const { password: _, ...safeUser } = newUser;
+      return safeUser;
+  }
 
-  addProduct: (sellerId: string, productData: Partial<Product>) => {
+  static toggleWishlist(userId: string, productId: string) {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) return;
+      
+      if (user.wishlist.includes(productId)) {
+          user.wishlist = user.wishlist.filter((id: string) => id !== productId);
+      } else {
+          user.wishlist.push(productId);
+      }
+  }
+
+  static createOrder(userId: string, cart: CartItem[], total: number) {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) throw new Error("User not found");
+      
+      if (user.walletBalance < total) {
+          throw new Error("Insufficient funds");
+      }
+      
+      // Deduct from wallet
+      user.walletBalance -= total;
+      
+      // Create Transaction
+      transactions.push({
+          id: `tx${Date.now()}_deduct`,
+          userId: user.id,
+          type: 'PAYMENT',
+          amount: -total,
+          date: Date.now(),
+          description: `Order Payment (${cart.length} items)`
+      });
+
+      // Group items by seller to create separate orders if needed, 
+      // but for simplicity we'll create one order per seller or just one generic order if mixed?
+      // Let's assume one order per unique seller in cart
+      
+      const sellers = new Set(cart.map(i => i.sellerId));
+      sellers.forEach(sellerId => {
+          const sellerItems = cart.filter(i => i.sellerId === sellerId);
+          const sellerTotal = sellerItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+          // Delivery fee handling logic simplified: assume partial delivery fee or covered by buyer in total
+          
+          const order: Order = {
+              id: `ord${Date.now()}_${sellerId}`,
+              buyerId: userId,
+              sellerId: sellerId,
+              items: sellerItems,
+              totalAmount: sellerTotal, // Simplified, doesn't include delivery split
+              status: 'PAID_ESCROW',
+              createdAt: Date.now()
+          };
+          orders.push(order);
+
+          // Create Escrow Hold Transaction for System/Seller logic (simulated)
+          transactions.push({
+              id: `tx${Date.now()}_escrow_${sellerId}`,
+              userId: sellerId, // This might show in seller's history as pending
+              type: 'ESCROW_HOLD',
+              amount: sellerTotal,
+              date: Date.now(),
+              description: `Escrow Hold for Order #${order.id}`
+          });
+          
+          // Notify Seller
+          const seller = users.find((u: any) => u.id === sellerId);
+          if (seller) {
+              seller.notifications.push({
+                  id: `n${Date.now()}`,
+                  userId: sellerId,
+                  message: `New Order Received: #${order.id}`,
+                  type: 'info',
+                  isRead: false,
+                  date: Date.now()
+              });
+          }
+      });
+  }
+
+  static topUpWallet(userId: string, amount: number) {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) throw new Error("User not found");
+      
+      user.walletBalance += amount;
+      transactions.push({
+          id: `tx${Date.now()}`,
+          userId: userId,
+          type: 'DEPOSIT',
+          amount: amount,
+          date: Date.now(),
+          description: 'Wallet Top Up'
+      });
+  }
+
+  static withdrawFunds(userId: string, amount: number) {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) throw new Error("User not found");
+      if (user.walletBalance < amount) throw new Error("Insufficient funds");
+      
+      user.walletBalance -= amount;
+      transactions.push({
+          id: `tx${Date.now()}`,
+          userId: userId,
+          type: 'WITHDRAWAL',
+          amount: -amount,
+          date: Date.now(),
+          description: 'Withdrawal to Bank'
+      });
+  }
+
+  static getWalletBalance(userId: string): number {
+      const user = users.find((u: any) => u.id === userId);
+      return user ? user.walletBalance : 0;
+  }
+
+  static getOrdersForUser(userId: string): Order[] {
+      return orders.filter(o => o.buyerId === userId || o.sellerId === userId);
+  }
+
+  static getUserTransactions(userId: string): Transaction[] {
+      return transactions.filter(t => t.userId === userId).sort((a, b) => b.date - a.date);
+  }
+
+  static getSellerProducts(sellerId: string): Product[] {
+      return products.filter((p: Product) => p.sellerId === sellerId);
+  }
+
+  static confirmDeliverySent(orderId: string) {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) throw new Error("Order not found");
+      order.status = 'SELLER_CONFIRMED';
+      order.sellerConfirmedAt = Date.now();
+      
+      // Notify Buyer
+      const buyer = users.find((u: any) => u.id === order.buyerId);
+      if (buyer) {
+          buyer.notifications.push({
+              id: `n${Date.now()}`,
+              userId: buyer.id,
+              message: `Order #${order.id} has been sent by seller`,
+              type: 'info',
+              isRead: false,
+              date: Date.now()
+          });
+      }
+  }
+
+  static confirmOrderReceived(orderId: string) {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) throw new Error("Order not found");
+      
+      if (order.status !== 'SELLER_CONFIRMED') throw new Error("Order not yet sent by seller");
+      
+      order.status = 'COMPLETED';
+      
+      // Release Escrow to Seller
+      const seller = users.find((u: any) => u.id === order.sellerId);
+      if (seller) {
+          seller.walletBalance += order.totalAmount;
+          
+          transactions.push({
+              id: `tx${Date.now()}_release`,
+              userId: seller.id,
+              type: 'ESCROW_RELEASE',
+              amount: order.totalAmount,
+              date: Date.now(),
+              description: `Payment Released for Order #${order.id}`
+          });
+          
+          seller.notifications.push({
+              id: `n${Date.now()}`,
+              userId: seller.id,
+              message: `Payment released for Order #${order.id}`,
+              type: 'success',
+              isRead: false,
+              date: Date.now()
+          });
+      }
+  }
+
+  static addProduct(sellerId: string, productData: Omit<Product, 'id' | 'sellerId' | 'rating' | 'inStock' | 'image'>) {
       const newProduct: Product = {
-          id: `prod_${Date.now()}`,
+          id: `p${Date.now()}`,
           sellerId,
-          name: sanitize(productData.name || 'Untitled'),
-          description: sanitize(productData.description || ''),
-          price: Number(productData.price) || 0,
-          category: productData.category as Category || 'Merch',
-          image: productData.image || 'https://picsum.photos/400?random=' + Math.random(),
+          ...productData,
+          image: `https://picsum.photos/400/400?random=${Date.now()}`,
           rating: 0,
-          inStock: true,
-          estimatedDelivery: sanitize(productData.estimatedDelivery || '2-3 Days')
+          inStock: true
       };
       products.push(newProduct);
-      return newProduct;
-  },
-
-  deleteProduct: (productId: string) => {
-      products = products.filter(p => p.id !== productId);
-  },
-
-  // --- Wishlist & Notifications ---
-
-  toggleWishlist: (userId: string, productId: string) => {
-      users = users.map(u => {
-          if (u.id === userId) {
-              const exists = u.wishlist.includes(productId);
-              const newWishlist = exists 
-                  ? u.wishlist.filter(id => id !== productId)
-                  : [...u.wishlist, productId];
-              return { ...u, wishlist: newWishlist };
-          }
-          return u;
-      });
-  },
-
-  markNotificationRead: (userId: string, notifId: string) => {
-      users = users.map(u => {
-          if (u.id === userId) {
-             return {
-                 ...u,
-                 notifications: u.notifications.map(n => n.id === notifId ? { ...n, isRead: true } : n)
-             };
-          }
-          return u;
-      });
-  },
-
-  // --- Standard Getters ---
-  getAllUsers: () => users.map(({password, ...u}) => u), 
-  getAdTiers: () => adTiers,
-  updateAdTier: (id: string, price: number) => { adTiers = adTiers.map(t => t.id === id ? { ...t, price } : t); },
-  getSecurityLogs: () => [...securityLogs],
-  clearSecurityLogs: () => { securityLogs = []; },
-  
-  // Wallet
-  topUpWallet: (userId: string, amount: number) => {
-    const user = users.find(u => u.id === userId);
-    if (!user || user.role !== 'buyer') throw new Error("Unauthorized");
-    users = users.map(u => u.id === userId ? { ...u, walletBalance: u.walletBalance + amount } : u);
-    transactions.push({ id: `tx_${Date.now()}`, userId, type: 'DEPOSIT', amount, date: Date.now(), description: 'Wallet Top Up' });
-    addNotification(userId, `Wallet funded with ₦${amount.toLocaleString()}`, 'success');
-  },
-  
-  withdrawFunds: (userId: string, amount: number) => {
-    const user = users.find(u => u.id === userId);
-    if (!user || user.walletBalance < amount) throw new Error("Insufficient funds");
-    users = users.map(u => u.id === userId ? { ...u, walletBalance: u.walletBalance - amount } : u);
-    transactions.push({ id: `tx_${Date.now()}_wd`, userId, type: 'WITHDRAWAL', amount: -amount, date: Date.now(), description: 'Withdrawal' });
-    addNotification(userId, `Withdrawal of ₦${amount.toLocaleString()} processed`, 'info');
-  },
-  
-  getWalletBalance: (id: string) => users.find(u => u.id === id)?.walletBalance || 0,
-  
-  getProducts: () => products.filter(p => !users.find(u => u.id === p.sellerId)?.isBanned),
-  getSellerProducts: (sellerId: string) => products.filter(p => p.sellerId === sellerId),
-  
-  getProductReviews: (id: string) => reviews.filter(r => r.productId === id),
-  
-  submitReview: (productId: string, userId: string, rating: number, comment: string) => {
-      const review = { id: `r_${Date.now()}`, productId, userId, userName: users.find(u => u.id === userId)?.name || 'User', rating, comment: sanitize(comment), date: Date.now(), verifiedPurchase: true };
-      reviews.push(review);
-      // Recalc average
-      const prodReviews = reviews.filter(r => r.productId === productId);
-      const avg = prodReviews.reduce((a,b) => a + b.rating, 0) / prodReviews.length;
-      products = products.map(p => p.id === productId ? { ...p, rating: parseFloat(avg.toFixed(1)) } : p);
-  },
-
-  createOrder: async (buyerId: string, items: any[], total: number) => {
-      const newOrder: Order = {
-          id: `ord_${Date.now()}`,
-          buyerId,
-          sellerId: items[0].sellerId,
-          items,
-          totalAmount: total,
-          status: 'PAID_ESCROW',
-          createdAt: Date.now()
-      };
-      orders.push(newOrder);
-      addNotification(buyerId, `Order #${newOrder.id} placed successfully.`, 'success');
-      addNotification(newOrder.sellerId, `New Order #${newOrder.id} received!`, 'info');
-      return newOrder;
-  },
-
-  getOrdersForUser: (userId: string) => orders.filter(o => o.buyerId === userId || o.sellerId === userId).sort((a,b) => b.createdAt - a.createdAt),
-  getUserTransactions: (userId: string) => transactions.filter(t => t.userId === userId).sort((a,b) => b.date - a.date),
-  
-  confirmDeliverySent: (orderId: string) => {
-      const order = orders.find(o => o.id === orderId);
-      orders = orders.map(o => o.id === orderId ? { ...o, status: 'SELLER_CONFIRMED', sellerConfirmedAt: Date.now() } : o);
-      if (order) addNotification(order.buyerId, `Order #${orderId} has been sent by the seller. Please confirm receipt.`, 'info');
-  },
-  
-  confirmOrderReceived: (orderId: string) => {
-      const order = orders.find(o => o.id === orderId);
-      if (!order) return;
-      users = users.map(u => u.id === order.sellerId ? { ...u, walletBalance: u.walletBalance + order.totalAmount } : u);
-      transactions.push({ id: `tx_${Date.now()}`, userId: order.sellerId, type: 'ESCROW_RELEASE', amount: order.totalAmount, date: Date.now(), description: `Escrow Release #${orderId}` });
-      orders = orders.map(o => o.id === orderId ? { ...o, status: 'COMPLETED' } : o);
-      addNotification(order.sellerId, `Funds for Order #${orderId} released to your wallet.`, 'success');
-  },
-  
-  refundOrder: (orderId: string, reason: string) => {
-      const order = orders.find(o => o.id === orderId);
-      if (!order) return;
-      users = users.map(u => u.id === order.buyerId ? { ...u, walletBalance: u.walletBalance + order.totalAmount } : u);
-      transactions.push({ id: `tx_${Date.now()}`, userId: order.buyerId, type: 'REFUND', amount: order.totalAmount, date: Date.now(), description: `Refund #${orderId}` });
-      orders = orders.map(o => o.id === orderId ? { ...o, status: 'REFUNDED' } : o);
-      addNotification(order.buyerId, `Order #${orderId} refunded.`, 'info');
-      addNotification(order.sellerId, `Order #${orderId} cancelled by buyer.`, 'warning');
   }
-};
+
+  static deleteProduct(productId: string) {
+      products = products.filter((p: Product) => p.id !== productId);
+  }
+
+  static updateProfile(userId: string, data: { name: string; phoneNumber: string; password?: string }): User {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) throw new Error("User not found");
+      
+      user.name = data.name;
+      user.phoneNumber = data.phoneNumber;
+      if (data.password) user.password = data.password;
+      
+      const { password: _, ...safeUser } = user;
+      return safeUser;
+  }
+
+  static verifyImageRealness(imageData: string): Promise<boolean> {
+      // Mock verification
+      return new Promise((resolve, reject) => {
+          setTimeout(() => {
+              if (Math.random() > 0.1) resolve(true);
+              else reject(new Error("Fake image detected"));
+          }, 1500);
+      });
+  }
+
+  // Admin Methods
+  
+  static getSecurityLogs(): SecurityLogEntry[] {
+      return securityLogs;
+  }
+
+  static getAdTiers(): AdTier[] {
+      return adTiers;
+  }
+
+  static banUser(userId: string, type: 'temporary' | 'permanent', reason: string) {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) return;
+      
+      user.isBanned = true;
+      user.banDetails = {
+          type,
+          reason,
+          bannedAt: Date.now(),
+          scheduledDeletionAt: type === 'permanent' ? Date.now() + (7 * 24 * 60 * 60 * 1000) : undefined
+      };
+
+      securityLogs.push({
+          id: `sec${Date.now()}`,
+          timestamp: Date.now(),
+          level: 'HIGH',
+          message: `User ${user.name} (${userId}) was BANNED (${type}). Reason: ${reason}`
+      });
+  }
+
+  static unbanUser(userId: string) {
+      const user = users.find((u: any) => u.id === userId);
+      if (!user) return;
+      
+      user.isBanned = false;
+      user.banDetails = undefined;
+      
+      securityLogs.push({
+          id: `sec${Date.now()}`,
+          timestamp: Date.now(),
+          level: 'MEDIUM',
+          message: `User ${user.name} (${userId}) was UNBANNED.`
+      });
+  }
+
+  static deleteUser(userId: string) {
+      users = users.filter((u: any) => u.id !== userId);
+      products = products.filter((p: Product) => p.sellerId !== userId);
+      // Clean up other relations if necessary
+      
+      securityLogs.push({
+          id: `sec${Date.now()}`,
+          timestamp: Date.now(),
+          level: 'CRITICAL',
+          message: `User ${userId} was PERMANENTLY DELETED.`
+      });
+  }
+}
